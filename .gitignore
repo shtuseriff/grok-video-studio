@@ -1,0 +1,62 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# Node
+web/node_modules/
+web/dist/
+
+# Sessions & generated output
+sessions/
+
+# Logs
+*.log
+
+# Media files — video, images, playlists
+*.mp4
+*.m3u8
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Prompt / scratch text files
+prompt.txt
+*_*.txt
+
+# Generated JSON output (video metadata)
+*_video*.json
+
+# Legacy hex-named session directories & backups
+/37a755/
+/3ec260/
+/73ef5f/
+/c38d93/
+/bku/
+
+# Scratch / old files
+*.old
+
+# Secrets — NEVER commit
+api.txt
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude
+.claude/

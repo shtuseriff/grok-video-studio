@@ -1,0 +1,13 @@
+{
+  "currency": "USD",
+  "source": "https://docs.x.ai/developers/models",
+  "models": {
+    "grok-imagine-video": {
+      "per_second": {
+        "480p": 0.05,
+        "720p": 0.05
+      }
+    }
+  },
+  "violation_fee": 0.05
+}

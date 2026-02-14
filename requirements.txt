@@ -1,0 +1,4 @@
+xai-sdk
+fastapi
+uvicorn
+python-multipart
