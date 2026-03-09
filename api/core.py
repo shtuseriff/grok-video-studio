@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import base64
+import io
 import shutil
 import subprocess
 import urllib.request
 from pathlib import Path
 from typing import Iterable
 
+from PIL import Image
 from xai_sdk import Client
 from xai_sdk.chat import image, system, user
 
@@ -25,8 +27,42 @@ class ModerationError(RuntimeError):
     """Raised when a request fails moderation checks."""
 
 
+_GRPC_SAFE_BYTES = 3 * 1024 * 1024  # 3 MB — keeps total gRPC message under the 4 MB server limit
+
+
+def _resize_image_bytes(image_bytes: bytes, mime_type: str) -> tuple[bytes, str]:
+    """Resize image bytes proportionally until they fit within the gRPC-safe limit."""
+    img = Image.open(io.BytesIO(image_bytes))
+    # Always work in JPEG for resized output (smaller, no transparency needed here)
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    fmt = "JPEG"
+    out_mime = "image/jpeg"
+    quality = 85
+    scale = 1.0
+    while True:
+        w = int(img.width * scale)
+        h = int(img.height * scale)
+        resized = img.resize((max(w, 1), max(h, 1)), Image.LANCZOS)
+        buf = io.BytesIO()
+        resized.save(buf, format=fmt, quality=quality)
+        data = buf.getvalue()
+        if len(data) <= _GRPC_SAFE_BYTES:
+            return data, out_mime
+        # Reduce by ~20% each pass
+        scale *= 0.8
+        if scale < 0.05:
+            # Last-ditch: drop quality
+            quality = max(quality - 10, 30)
+            scale = 1.0
+
+
 def load_image_as_data_url(image_path: Path) -> str:
-    """Load an image file and return it as a base64 data URL."""
+    """Load an image file and return it as a base64 data URL.
+
+    If the raw file would exceed the xAI gRPC message size limit (4 MB),
+    the image is transparently resized/recompressed before encoding.
+    """
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
@@ -41,6 +77,9 @@ def load_image_as_data_url(image_path: Path) -> str:
     mime_type = mime_types.get(suffix, "image/jpeg")
 
     image_bytes = image_path.read_bytes()
+    if len(image_bytes) > _GRPC_SAFE_BYTES:
+        image_bytes, mime_type = _resize_image_bytes(image_bytes, mime_type)
+
     base64_string = base64.b64encode(image_bytes).decode("utf-8")
     return f"data:{mime_type};base64,{base64_string}"
 
